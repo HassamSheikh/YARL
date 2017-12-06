@@ -16,8 +16,6 @@ def create_model(state_dim, number_of_actions):
     model.add(Dense(16))
     model.add(Activation('relu'))
     model.add(Dense(output_dim=number_of_actions, activation='linear'))
-    opt = Adam(lr=0.001)
-    model.compile(loss='mse', optimizer=opt)
     return model
 
 env = gym.make('CartPole-v0')
@@ -25,4 +23,5 @@ model=create_model(env.observation_space.shape[0], env.action_space.n)
 replay_buffer=ReplayBuffer()
 policy=EpsilonGreedyPolicy()
 agent=DQNAgent(env, model, 0.9, replay_buffer, policy)
+agent.compile()
 agent.fit(100000, 32)
