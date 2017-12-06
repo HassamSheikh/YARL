@@ -11,6 +11,6 @@ class EpsilonGreedyPolicy:
         action_probabilites[best_action]+=(1-self.epsilon)
         return action_probabilites
 
-    def epsilon_greedy_action(self, q_values):
+    def select_action(self, q_values):
         action_probabilites=self.compute_action_probabilisties(q_values)
         return np.random.choice(len(q_values), p=action_probabilites)
