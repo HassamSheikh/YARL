@@ -14,3 +14,7 @@ class EpsilonGreedyPolicy:
     def select_action(self, q_values):
         action_probabilites=self.compute_action_probabilisties(q_values)
         return np.random.choice(len(q_values), p=action_probabilites)
+
+class GreedyPolicy:
+    def select_action(self, q_values):
+        return np.argmax(q_values)
