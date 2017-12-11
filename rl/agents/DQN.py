@@ -33,7 +33,6 @@ class DQNAgent:
         if (states.shape)==(self.state_dim,):
             return self.trainable_model.predict(states.reshape(1, self.state_dim)).flatten() #Predicting Q values of a single state
         if target:
-            import pdb; pdb.set_trace()
             return self.target_model.predict(states) #Querying target network for Q values of multiple states
         return self.trainable_model.predict(states) #Querying the trainable network for Q values of multiple states
 
@@ -49,8 +48,8 @@ class DQNAgent:
         p = self.compute_q_values(states)
         p_ = self.compute_q_values(states_)
 
-        x = np.zeros((batchLen, self.state_dim))
-        y = np.zeros((batchLen, self.action_dim))
+        new_state = np.zeros((batchLen, self.state_dim))
+        new_value = np.zeros((batchLen, self.action_dim))
         for i in range(batchLen):
             o = batch[i]
             s = o[0]; a = o[1]; r = o[2]; s_ = o[3]
@@ -61,20 +60,22 @@ class DQNAgent:
             else:
                 t[a] = r + self.gamma * np.amax(p_[i])
 
-            x[i] = s
-            y[i] = t
-        # states, actions, rewards, next_states=zip(*[[experience[0], experience[1], experience[2], experience[3]] for experience in experiences]) #Seperating states, actions, rewards and next states
-        # states=np.asarray(states) #Converting to numpy array
-        # place_holder_state=np.zeros(self.state_dim)
-        # next_states_=np.asarray([(place_holder_state if next_state is None else next_state) for next_state in next_states]) #Converting to numpy array
-        # q_values_for_states=self.compute_q_values(states)
-        # q_values_for_next_states=self.compute_q_values(next_states_, target=False) #Computing the max Q(S',A') for the using the target network
-        # for x in generator(len(experiences)):
-        #     y_true=rewards[x]
-        #     if next_states[x] is not None:
-        #         y_true +=self.gamma*(np.amax(q_values_for_next_states[x])) #Creating new target values for state action pair
-        #     q_values_for_states[x][actions[x]]=y_true #Updating the old target values with the new values
-        self.train_model(x, y)
+            new_state[i] = s
+            new_value[i] = t
+
+        experiences=batch #Sampling from replay buffer
+        states, actions, rewards, next_states=zip(*[[experience[0], experience[1], experience[2], experience[3]] for experience in experiences]) #Seperating states, actions, rewards and next states
+        states=np.asarray(states) #Converting to numpy array
+        place_holder_state=np.zeros(self.state_dim)
+        next_states_=np.asarray([(place_holder_state if next_state is None else next_state) for next_state in next_states]) #Converting to numpy array
+        q_values_for_states=self.compute_q_values(states)
+        q_values_for_next_states=self.compute_q_values(next_states_, target=False) #Computing the max Q(S',A') for the using the target network
+        for x in range(len(experiences)):
+            y_true=rewards[x]
+            if next_states[x] is not None:
+                y_true +=self.gamma*(np.amax(q_values_for_next_states[x])) #Creating new target values for state action pair
+            q_values_for_states[x][actions[x]]=y_true #Updating the old target values with the new values
+        self.train_model(states, q_values_for_states)
 
 
     def compile(self, opt=Adam(lr=0.001)):
