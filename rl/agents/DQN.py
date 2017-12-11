@@ -33,18 +33,18 @@ class DQNAgent:
         return self.trainable_model.predict(states) #Querying the trainable network for Q values of multiple states
 
     def experience_replay(self, experiences):
-        states, actions, rewards, next_states=zip(*[[experience[0], experience[1], experience[2], experience[3]] for experience in experiences #Seperating states, actions, rewards and next states
+        states, actions, rewards, next_states=zip(*[[experience[0], experience[1], experience[2], experience[3]] for experience in experiences]) #Seperating states, actions, rewards and next states
         states=np.asarray(states) #Converting to numpy array
         place_holder_state=np.zeros(self.state_dim)
         next_states_=np.asarray([(place_holder_state if next_state is None else next_state) for next_state in next_states]) #Converting to numpy array
         q_values_for_states=self.compute_q_values(states)
-        q_values_for_next_states=self.compute_q_values(next_states_, target=True) #Computing the max Q(S',A') for the using the target network
+        q_values_for_next_states=self.compute_q_values(next_states_, target=False) #Computing the max Q(S',A') for the using the target network
         for x in generator(len(experiences)):
             y_true=rewards[x]
             if next_states[x] is not None:
                 y_true +=self.gamma*(np.amax(q_values_for_next_states[x])) #Creating new target values for state action pair
             q_values_for_states[x][actions[x]]=y_true #Updating the old target values with the new values
-        self.train_model(states, q_values_for_states) 
+        self.train_model(states, q_values_for_states)
 
 
     def compile(self, opt=Adam(lr=0.001)):
@@ -77,3 +77,4 @@ class DQNAgent:
                     self.experience_replay(experience) #Experience replay step
                 if done:
                     break
+            print("Total reward ", total_reward)
