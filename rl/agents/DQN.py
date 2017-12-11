@@ -7,22 +7,23 @@ class DQNAgent:
     def __init__(self, env, model, gamma, replay_buffer, policy, tau):
         self.env=env
         self.trainable_model=model
+        self.target_model=model
         self.replay_buffer=replay_buffer
         self.policy=policy
         self.gamma=gamma
         self.state_dim=env.observation_space.shape[0]
         self.action_dim=env.action_space.n
         self.tau=tau
-        self.target_model=0
+
 
     def train_model(self, training_data, training_label):
-        self.trainable_model.train_on_batch(training_data, training_label)
+        self.trainable_model.train_on_batch(training_data, training_label) #Training the network
 
     def update_target_model(self):
-        if self.tau>1:
-            self.target_model=update_model_by_polyak_average(self.target_model, self.trainable_model, self.tau)
+        if self.tau>0:
+            self.target_model=update_model_by_polyak_average(self.target_model, self.trainable_model, self.tau) #Updating the target network using the Polyak Averaging
         else:
-            self.target_model=clone_weights(self.target_model, self.trainable_model)
+            self.target_model=clone_weights(self.target_model, self.trainable_model) #Updating the target network in case Polyak Averaging is not used
 
     def compute_q_values(self, states, target=False):
         if (states.shape)==(self.state_dim,):
@@ -32,18 +33,18 @@ class DQNAgent:
         return self.trainable_model.predict(states) #Querying the trainable network for Q values of multiple states
 
     def experience_replay(self, experiences):
-        states, actions, rewards, next_states=zip(*[[experience[0], experience[1], experience[2], experience[3]] for experience in experiences])
-        states=np.asarray(states)
+        states, actions, rewards, next_states=zip(*[[experience[0], experience[1], experience[2], experience[3]] for experience in experiences #Seperating states, actions, rewards and next states
+        states=np.asarray(states) #Converting to numpy array
         place_holder_state=np.zeros(self.state_dim)
-        next_states_=np.asarray([(place_holder_state if next_state is None else next_state) for next_state in next_states])
+        next_states_=np.asarray([(place_holder_state if next_state is None else next_state) for next_state in next_states]) #Converting to numpy array
         q_values_for_states=self.compute_q_values(states)
-        q_values_for_next_states=self.compute_q_values(next_states_, target=True)
+        q_values_for_next_states=self.compute_q_values(next_states_, target=True) #Computing the max Q(S',A') for the using the target network
         for x in generator(len(experiences)):
             y_true=rewards[x]
             if next_states[x] is not None:
-                y_true +=self.gamma*(np.amax(q_values_for_next_states[x]))
-            q_values_for_states[x][actions[x]]=y_true
-        self.train_model(states, q_values_for_states)
+                y_true +=self.gamma*(np.amax(q_values_for_next_states[x])) #Creating new target values for state action pair
+            q_values_for_states[x][actions[x]]=y_true #Updating the old target values with the new values
+        self.train_model(states, q_values_for_states) 
 
 
     def compile(self, opt=Adam(lr=0.001)):
