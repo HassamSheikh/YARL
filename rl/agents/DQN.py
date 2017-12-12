@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 from rl.util import *
 from keras.optimizers import Adam, RMSprop
+from keras import losses
 
 class DQNAgent:
     def __init__(self, env, model, policy, replay_buffer, gamma=0.99, batch_size=64, tau=0, target_model_update_interval=10000, render=False):
@@ -68,11 +69,10 @@ class DQNAgent:
         self.train_model(training_data, training_label)
 
 
-    def compile(self):
-        opt = RMSprop(lr=0.00025)
+    def compile(self, opt=RMSprop(lr=0.00025), loss):
         self.target_model=clone_model(self.trainable_model)
-        self.trainable_model.compile(loss='mse', optimizer=opt)
-        self.target_model.compile(loss='mse', optimizer=opt)
+        self.trainable_model.compile(loss=loss, optimizer=opt)
+        self.target_model.compile(loss=loss, optimizer=opt)
 
 
     def fit(self, number_of_epsiodes):

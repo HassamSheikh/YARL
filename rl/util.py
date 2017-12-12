@@ -19,3 +19,7 @@ def update_model_by_polyak_average(model_to_be_updated, source_model, tau):
 def polyak_averaging(old, new, tau):
     import numpy as np
     return np.multiply(old, float(tau)) + np.multiply(new, float(1-tau))
+
+def huber_loss(y_true, y_pred, delta_value=1.0):
+    import tensorflow as tf
+    return tf.losses.huber_loss(y_true, y_pred, delta=delta_value)
