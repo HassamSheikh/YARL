@@ -16,9 +16,9 @@ def create_model(state_dim, number_of_actions):
     return model
 
 env = gym.make('CartPole-v0')
-model=create_model(4, env.action_space.n)
+model=create_model(env.observation_space.shape[0], env.action_space.n)
 replay_buffer=ReplayBuffer()
 policy=DecayingEpsilonGreedyPolicy()
-agent=DQNAgent(env, model, policy, replay_buffer, tau=0.99)
+agent=DQNAgent(env, model, policy, replay_buffer, target_model_update_interval=100)
 agent.compile()
 agent.fit(10000)

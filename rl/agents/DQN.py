@@ -46,18 +46,26 @@ class DQNAgent:
 
     def experience_replay(self):
         experiences = self.replay_buffer.sample(self.batch_size)
-        states, actions, rewards, next_states=zip(*[[experience[0], experience[1], experience[2], experience[3]] for experience in experiences]) #Seperating states, actions, rewards and next states
+        states, next_states=zip(*[[experience[0], experience[3]] for experience in experiences]) #Seperating states, actions, rewards and next states
         states=np.asarray(states) #Converting to numpy array
         place_holder_state=np.zeros(self.state_dim)
         next_states_=np.asarray([(place_holder_state if next_state is None else next_state) for next_state in next_states]) #Converting to numpy array
         q_values_for_states=self.compute_q_values(states)
         q_values_for_next_states=self.compute_q_values(next_states_, True) #Computing the max Q(S',A') for the using the target network
-        for x in range(len(experiences)):
-            y_true=rewards[x]
-            if next_states[x] is not None:
-                y_true +=self.gamma*(np.amax(q_values_for_next_states[x])) #Creating new target values for state action pair
-            q_values_for_states[x][actions[x]]=y_true #Updating the old target values with the new values
-        self.train_model(states, q_values_for_states)
+        batch_len=len(experiences)
+        training_data=np.zeros((batch_len, self.state_dim))
+        training_label=np.zeros((batch_len, self.action_dim))
+        index=0
+        for state, action, reward, next_state in experiences:
+            y_true = q_values_for_states[index]
+            if next_state is None:
+                y_true[action] = reward
+            else:
+                y_true[action] = reward + (self.gamma * np.amax(q_values_for_next_states[index]))
+            training_data[index]=state
+            training_label[index]=y_true
+            index+=1
+        self.train_model(training_data, training_label)
 
 
     def compile(self):
@@ -71,7 +79,6 @@ class DQNAgent:
         for episode in range(number_of_epsiodes): #Looping through total number of episodes
             total_reward=0 #The total reward an agent will get after an epsiode
             state=self.env.reset() #Resetting environment
-
             while True:
                 self.env.render() if self.render == True else False #Rendering the environment
                 action=self.select_action(state) #Select action based on the policy
