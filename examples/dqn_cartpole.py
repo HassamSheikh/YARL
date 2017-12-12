@@ -5,23 +5,20 @@ from keras.layers import Dense, Activation
 from keras.optimizers import RMSprop, Adam
 from rl.agents.DQN import DQNAgent
 from rl.memory.ReplayBuffer import ReplayBuffer
-from rl.policy.Policy import EpsilonGreedyPolicy
+from rl.policy.Policy import DecayingEpsilonGreedyPolicy
 import gym
 
 def create_model(state_dim, number_of_actions):
     model = Sequential()
-    model.add(Dense(output_dim=16, activation='relu', input_dim=state_dim))
-    model.add(Dense(16))
-    model.add(Activation('relu'))
-    model.add(Dense(16))
-    model.add(Activation('relu'))
+    model.add(Dense(output_dim=64, activation='relu', input_dim=state_dim))
     model.add(Dense(output_dim=number_of_actions, activation='linear'))
+    opt = RMSprop(lr=0.00025)
     return model
 
 env = gym.make('CartPole-v0')
-model=create_model(env.observation_space.shape[0], env.action_space.n)
+model=create_model(4, env.action_space.n)
 replay_buffer=ReplayBuffer()
-policy=EpsilonGreedyPolicy()
-agent=DQNAgent(env, model, 0.9, replay_buffer, policy)
+policy=DecayingEpsilonGreedyPolicy()
+agent=DQNAgent(env, model, policy, replay_buffer, tau=0.99)
 agent.compile()
-agent.fit(100000, 32)
+agent.fit(10000)
