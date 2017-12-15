@@ -69,7 +69,7 @@ class DQNAgent:
         self.train_model(training_data, training_label)
 
 
-    def compile(self, opt=RMSprop(lr=0.00025), loss):
+    def compile(self, opt=RMSprop(lr=0.00025), loss='mse'):
         self.target_model=clone_model(self.trainable_model)
         self.trainable_model.compile(loss=loss, optimizer=opt)
         self.target_model.compile(loss=loss, optimizer=opt)
