@@ -1,6 +1,5 @@
 <table>
   <tr>
-    <td></td>
     <td><img src="/assets/cartpole.gif?raw=true" width="200"></td>
     <td><img src="/assets/pendulum.gif?raw=true" width="200"></td>
   </tr>
