@@ -9,7 +9,7 @@
 `YARL` is a Deep Reinforcement Learning package that is specifically designed to seamlessly integrate with [Keras](http://keras.io).
 `YARL` works with [OpenAI Gym](https://gym.openai.com/) which means that it makes really easy to test same algorithm on multiple environments without having to change the code. `YARL` works with both Windows and Linux. As of now `YARL` supports only [TensorFlow](https://www.tensorflow.org/).
 
-## Algorithms implemented?
+## Algorithms Implemented
 The following algorithms have been implemented:
 
 - Deep Q Learning (DQN) [[1]](http://arxiv.org/abs/1312.5602), [[2]](http://home.uchicago.edu/~arij/journalclub/papers/2015_Mnih_et_al.pdf)
