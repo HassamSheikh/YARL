@@ -28,9 +28,13 @@ def huber_loss(y_true, y_pred, delta_value=1.0):
 def build_gym_environment(gym_env_name):
     """Returns the OpenAI Gym environment with state and action dimensions to build the Keras network"""
     env = gym.make(gym_env_name)
+    return env, (*find_state_and_action_dimension(env))
+
+def find_state_and_action_dimension(env):
+    """Returns state and action dimensions of the Gym environmentsta"""
     state_dim = env.observation_space.shape[0]
     if isinstance(env.action_space, gym.spaces.Box):
         action_dim = env.action_space.shape[0]
     else:
         action_dim = env.action_space.n
-    return env, state_dim, action_dim
+    return state_dim, action_dim

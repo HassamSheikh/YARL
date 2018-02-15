@@ -13,30 +13,36 @@ class DDPGAgent:
             raise ValueError('Critic expects only state and action as input')
         if len(actor.outputs) > 1:
             raise ValueError('Actor has more than 1 outputs. DDPG actor should have 1 output to predict the action')
-        if len(critic.inputs) != 1:
-            raise ValueError('Critic should have 2 inputs. State and action')
+        if len(actor.inputs) != 1:
+            raise ValueError('Actor expects only state as input')
         self.env=env
         self.actor_trainable_model=actor
-        self.actor_target_model=actor
         self.critic_trainable_model=critic
-        self.critic_target_model=model
         self.replay_buffer=replay_buffer
         self.gamma=gamma
         self.batch_size=batch_size
         self.tau=tau
         self.render=render
-        self.state_dim=env.observation_space.shape[0]
-        self.action_dim=env.action_space.n
-
+        self.state_dim, self.action_dim = find_state_and_action_dimension(env)
         if self.render:
             warnings.warn("Warning: Rendering environment will make the training extremely slow")
         if self.tau>0:
             warnings.warn("Warning: Polyvak Averaging will be used to update target model at every step")
 
-    def compile(self, opt=RMSprop(lr=0.00025), loss='mse'):
-        self.target_model=clone_model(self.trainable_model)
-        self.trainable_model.compile(loss=loss, optimizer=opt)
-        self.target_model.compile(loss=loss, optimizer=opt)
+    def compile(self, opt=[RMSprop(lr=0.00025), RMSprop(lr=0.00025)] , loss=['mse','mse']):
+        """Set optimizers and loss functions for Actor and Critic Model """
+        if not hasattr(self.actor_trainable_model, 'loss') or not hasattr(self.actor_trainable_model, 'optimizer') or not hasattr(self.critic_trainable_model, 'loss') or not hasattr(self.critic_trainable_model, 'optimizer')
+            warnings.warn("Warning: At least one of your models is missing either an optimizer or loss function")
+            if len(opt) != 2 or len(loss) != 2:
+                raise ValueError('Provide 2 optimizers and 2 loss functions')
+        self.actor_target_model=clone_model(self.actor_trainable_model)
+        self.critic_target_model=clone_model(self.critic_trainable_model)
+
+        self.actor_trainable_model.compile(loss=loss[0], optimizer=opt[0])
+        self.critic_trainable_model.compile(loss=loss[1], optimizer=opt[1])
+
+        self.actor_target_model.compile(loss=loss[0], optimizer=opt[0])
+        self.critic_target_model.compile(loss=loss[1], optimizer=opt[1])
 
     def train_model(self, training_data, training_label, batch_size=64):
         self.trainable_model.fit(training_data, training_label, batch_size=self.batch_size, verbose=0) #Training the network
