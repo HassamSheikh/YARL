@@ -1,14 +1,13 @@
 import sys
 sys.path.append('../')
 from keras.models import Model
-from keras.models import Sequential
-from keras.layers import Dense, Activation, Input, Add, merge
+from keras.layers import Dense, Activation, Input, Add
 from keras.optimizers import RMSprop, Adam
 from rl.memory.ReplayBuffer import ReplayBuffer
-from rl.policy.Policy import DecayingEpsilonGreedyPolicy
 from rl.agents.DDPG import DDPGAgent
 from rl.util import *
 import gym
+import numpy as np
 
 def create_critic_network(state_size, action_dim):
     state_input_layer = Input(shape=(state_size,), name='critic_state_input')
@@ -36,7 +35,8 @@ def create_actor_network(state_size, action_dim):
 env, state_dim, action_dim = build_gym_environment('Pendulum-v0')
 critic = create_critic_network(state_dim, action_dim)
 actor = create_actor_network(state_dim, action_dim)
-#replay_buffer=ReplayBuffer()
-#agent=DDPGAgent(env, actor, critic,  replay_buffer, tau=0.99)
-#agent.compile(RMSprop(lr=0.00025), losses.logcosh)
-# agent.fit(10000)
+replay_buffer=ReplayBuffer()
+random_process=OrnsteinUhlenbeckActionNoise(mu=np.zeros(action_dim), sigma=0.3)
+agent=DDPGAgent(env, actor, critic, replay_buffer, random_process, tau=0.999)
+agent.compile()
+agent.fit(10000)
