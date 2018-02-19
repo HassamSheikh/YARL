@@ -55,50 +55,35 @@ class DDPGAgent:
         else:
             self.target_model=clone_weights(self.target_model, self.trainable_model) #Updating the target network in case Polyak Averaging is not used
 
-    def select_action(self, state, target=False):
+    def select_action(self, state):
         return self.actor_trainable_model.predict(state.reshape(1, self.state_dim)).flatten() + self.random_process()
 
-    def select_action_from_target_actor(self, state):
-        return self.actor_target_model.predict(state.reshape(1, self.state_dim)).flatten()
-
-    def compute_q_values(self, state, target=False):
+    def compute_q_values(self, states, target=False):
         if target:
-            action = self.select_action_from_target_actor(state)
-            return self.critic_target_model([state, action])
-
+            actions = self.actor_target_model.predict(states)
+            return self.critic_target_model.predict([states, actions]) #Querying target network for Q values of multiple states
+        actions = self.actor_trainable_model.predict(states)
+        return self.critic_trainable_model.predict([states, actions])
 
     def experience_replay(self):
         experiences = self.replay_buffer.sample(self.batch_size)
-        import pdb; pdb.set_trace()
-        batch_len = self.batch_size
-        training_data=np.zeros((batch_len, self.state_dim))
-        training_label=np.zeros((batch_len, 1))
+        states, next_states=zip(*[[experience[0], experience[3]] for experience in experiences]) #Seperating states, actions, rewards and next states
+        states=np.asarray(states) #Converting to numpy array
         place_holder_state=np.zeros(self.state_dim)
-        for index, (state, action, reward, next_state) in enumerate(experiences):
-            if next_state is None:
-                y_target = reward
-            else:
-                y_target = reward + (self.gamma * self.compute_q_values(next_state, True))
+        next_states_=np.asarray([(place_holder_state if next_state is None else next_state) for next_state in next_states]) #Converting to numpy array
 
-        # ff_states = experiences[:,[0]]
-        # states=[experience for experience in experiences] #Seperating states, actions, rewards and next states
-        # states=np.asarray(states) #Converting to numpy array
-        # place_holder_state=np.zeros(self.state_dim)
-        # next_states_=np.asarray([(place_holder_state if next_state is None else next_state) for next_state in next_states]) #Converting to numpy array
-        #
-        # q_values_for_states=self.compute_q_values(states)
-        #
-        # q_values_for_next_states=self.compute_q_values(next_states_, True)
-        #
-        # batch_len=len(experiences)
-        # training_data=np.zeros((batch_len, self.state_dim))
-        # training_label=np.zeros((batch_len, self.action_dim))
-        # index=0
-        # for state, action, reward, next_state in experiences:
-        #     y_true = q_values_for_states[index]
-        #     pdb.set_trace()
-        #     if next_state is None:
-        #         y_true[action] = reward
+        q_values_for_states=self.compute_q_values(states)
+        q_values_for_next_states=self.compute_q_values(next_states_, True)
+
+        batch_len=len(experiences)
+        training_data=np.zeros((batch_len, self.state_dim))
+        training_label=np.zeros((batch_len, self.action_dim))
+        index=0
+        for state, action, reward, next_state in experiences:
+            y_true = q_values_for_states[index]
+            pdb.set_trace()
+            if next_state is None:
+                y_true[action] = reward
         #     else:
         #         y_true[action] = reward + (self.gamma * np.amax(q_values_for_next_states[index]))
         #     training_data[index]=state
@@ -117,10 +102,11 @@ class DDPGAgent:
                 next_state, reward, done, _=self.env.step(action)
                 if done:
                     next_state=None #If the next state is terminal, mark it as None
-                self.replay_buffer.add_to_buffer(np.asarray((state, action, reward, next_state))) #Adding experience to replay buffer
+
+                self.replay_buffer.add_to_buffer((state, action, reward, next_state)) #Adding experience to replay buffer
                 state=next_state
                 total_reward +=reward
-                if episode > 5:
+                if episode > 50:
                     self.experience_replay() #Experience replay step
                 if done:
                     break
