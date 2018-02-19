@@ -1,4 +1,5 @@
 import gym
+import numpy as np
 def generator(number):
     return(i for i in range(number))
 
@@ -31,10 +32,32 @@ def build_gym_environment(gym_env_name):
     return env, (*find_state_and_action_dimension(env))
 
 def find_state_and_action_dimension(env):
-    """Returns state and action dimensions of the Gym environmentsta"""
+    """Returns state and action dimensions of the Gym environment"""
     state_dim = env.observation_space.shape[0]
     if isinstance(env.action_space, gym.spaces.Box):
         action_dim = env.action_space.shape[0]
     else:
         action_dim = env.action_space.n
     return state_dim, action_dim
+
+#Shamlessly copied from https://github.com/openai/baselines/blob/master/baselines/ddpg/noise.py
+class OrnsteinUhlenbeckActionNoise():
+    #OrnsteinUhlenbeck is based on Brownian motion: This random process is actually used for the exploration.
+    def __init__(self, mu, sigma, theta=.15, dt=1e-2, x0=None):
+        self.theta = theta
+        self.mu = mu
+        self.sigma = sigma
+        self.dt = dt
+        self.x0 = x0
+        self.reset()
+
+    def __call__(self):
+        x = self.x_prev + self.theta * (self.mu - self.x_prev) * self.dt + self.sigma * np.sqrt(self.dt) * np.random.normal(size=self.mu.shape)
+        self.x_prev = x
+        return x
+
+    def reset(self):
+        self.x_prev = self.x0 if self.x0 is not None else np.zeros_like(self.mu)
+
+    def __repr__(self):
+        return 'OrnsteinUhlenbeckActionNoise(mu={}, sigma={})'.format(self.mu, self.sigma)
