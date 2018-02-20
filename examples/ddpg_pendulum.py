@@ -8,7 +8,7 @@ from rl.agents.DDPG import DDPGAgent
 from rl.util import *
 import gym
 import numpy as np
-
+from keras import backend as K
 def create_critic_network(state_size, action_dim):
     state_input_layer = Input(shape=(state_size,), name='critic_state_input')
     action_input_layer = Input(shape=(action_dim,),name='critic_action_input')
@@ -27,7 +27,6 @@ def create_actor_network(state_dim, action_dim):
     h1 = Dense(10, activation='relu')(h0)
     output_layer = Dense(action_dim, activation='linear', name='actor_output_layer')(h1)
     model = Model(inputs=state_input_layer, outputs=output_layer)
-    model.compile(optimizer='rmsprop', loss='mse')
     return model
 
 
@@ -39,4 +38,6 @@ replay_buffer=ReplayBuffer()
 random_process=OrnsteinUhlenbeckActionNoise(mu=np.zeros(action_dim), sigma=0.3)
 agent=DDPGAgent(env, actor, critic, replay_buffer, random_process, tau=0.999)
 agent.compile()
+K.tf.summary.FileWriter('logs', graph=K.get_session().graph)
+
 agent.fit(10000)
