@@ -46,8 +46,8 @@ class DDPGAgent:
         self.actor_target_model.compile(loss=loss[0], optimizer=opt[0])
         self.critic_target_model.compile(loss=loss[1], optimizer=opt[1])
 
-    def train_model(self, training_data, training_label, batch_size=64):
-        self.trainable_model.fit(training_data, training_label, batch_size=self.batch_size, verbose=0) #Training the network
+    def train_critic_model(self, training_data, training_label, batch_size=64):
+        self.critic_trainable_model.fit(training_data, training_label, batch_size=self.batch_size, verbose=0) #Training the network
 
     def update_target_model(self):
         if self.tau>0:
@@ -60,36 +60,28 @@ class DDPGAgent:
 
     def compute_q_values(self, states, target=False):
         if target:
-            actions = self.actor_target_model.predict(states)
+            actions = self.actor_target_model.predict_on_batch(states)
             return self.critic_target_model.predict([states, actions]) #Querying target network for Q values of multiple states
         actions = self.actor_trainable_model.predict(states)
         return self.critic_trainable_model.predict([states, actions])
 
     def experience_replay(self):
-        experiences = self.replay_buffer.sample(self.batch_size)
-        states, next_states=zip(*[[experience[0], experience[3]] for experience in experiences]) #Seperating states, actions, rewards and next states
-        states=np.asarray(states) #Converting to numpy array
+        experiences=self.replay_buffer.sample(self.batch_size)
+        states=np.asarray([e[0] for e in experiences])
+        actions=np.asarray([e[2] for e in experiences])
+        rewards=np.asarray([e[2] for e in experiences])
+        next_states=([e[3] for e in experiences])#Seperating states, actions, rewards and next states
         place_holder_state=np.zeros(self.state_dim)
-        next_states_=np.asarray([(place_holder_state if next_state is None else next_state) for next_state in next_states]) #Converting to numpy array
-
-        q_values_for_states=self.compute_q_values(states)
+        next_states_=np.asarray([(place_holder_state if next_state is None else next_state) for next_state in next_states])
         q_values_for_next_states=self.compute_q_values(next_states_, True)
-
-        batch_len=len(experiences)
-        training_data=np.zeros((batch_len, self.state_dim))
-        training_label=np.zeros((batch_len, self.action_dim))
-        index=0
-        for state, action, reward, next_state in experiences:
-            y_true = q_values_for_states[index]
-            pdb.set_trace()
+        training_label=np.zeros((self.batch_size, 1))
+        for index, next_state in enumerate(next_states):
             if next_state is None:
-                y_true[action] = reward
-        #     else:
-        #         y_true[action] = reward + (self.gamma * np.amax(q_values_for_next_states[index]))
-        #     training_data[index]=state
-        #     training_label[index]=y_true
-        #     index+=1
-        # self.train_model(training_data, training_label)
+                y_target = rewards[index]
+            else:
+                y_target = rewards[index] + (self.gamma * q_values_for_next_states[index])
+            training_label[index]=y_target
+        self.train_critic_model([states, actions], training_label)
 
 
     def fit(self, number_of_epsiodes):

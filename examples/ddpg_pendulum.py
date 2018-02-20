@@ -21,8 +21,8 @@ def create_critic_network(state_size, action_dim):
     model = Model(inputs=[state_input_layer, action_input_layer], outputs=output_layer)
     return model
 
-def create_actor_network(state_size, action_dim):
-    state_input_layer = Input(shape=(state_size,), name='actor_state_input')
+def create_actor_network(state_dim, action_dim):
+    state_input_layer = Input(shape=(state_dim,), name='actor_state_input')
     h0 = Dense(50, activation='relu')(state_input_layer)
     h1 = Dense(10, activation='relu')(h0)
     output_layer = Dense(action_dim, activation='linear', name='actor_output_layer')(h1)
