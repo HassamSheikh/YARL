@@ -60,7 +60,7 @@ class DDPGAgent:
 
     def compute_q_values(self, states, target=False):
         if target:
-            actions = self.actor_target_model.predict_on_batch(states)
+            actions = self.actor_target_model.predict(states)
             return self.critic_target_model.predict([states, actions]) #Querying target network for Q values of multiple states
         actions = self.actor_trainable_model.predict(states)
         return self.critic_trainable_model.predict([states, actions])
