@@ -7,7 +7,7 @@ class ReplayBuffer:
 
     def sample(self, sample_size):
         n=min(sample_size, len(self.buffer))
-        return np.asarray(random.sample(self.buffer, n))
+        return random.sample(self.buffer, n)
 
     def add_to_buffer(self, experience):
         self.buffer.append(experience)

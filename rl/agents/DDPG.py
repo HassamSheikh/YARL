@@ -4,7 +4,7 @@ import numpy as np
 from rl.util import *
 from keras.optimizers import Adam, RMSprop
 from keras import losses
-import pdb
+from keras import backend as K
 
 class DDPGAgent:
     def __init__(self, env, actor, critic, replay_buffer, random_process, gamma=0.99, batch_size=64, tau=0, render=False):
@@ -40,9 +40,11 @@ class DDPGAgent:
         self.actor_target_model=clone_model(self.actor_trainable_model)
         self.critic_target_model=clone_model(self.critic_trainable_model)
 
+        self.action_gradients = K.tf.gradients(self.critic_trainable_model.output, self.critic_trainable_model.input_layers[1].input, name="Hassam_you_piece_of_shit")
+
         self.actor_trainable_model.compile(loss=loss[0], optimizer=opt[0])
         self.critic_trainable_model.compile(loss=loss[1], optimizer=opt[1])
-
+        self.sess = K.get_session()
         self.actor_target_model.compile(loss=loss[0], optimizer=opt[0])
         self.critic_target_model.compile(loss=loss[1], optimizer=opt[1])
 
@@ -58,6 +60,14 @@ class DDPGAgent:
     def select_action(self, state):
         return self.actor_trainable_model.predict(state.reshape(1, self.state_dim)).flatten() + self.random_process()
 
+    def compute_critic_gradients(self, states, actions):
+         return self.sess.run(self.action_gradients, feed_dict={
+            self.critic_trainable_model.input_layers[0].input: states,
+            self.critic_trainable_model.input_layers[1].input: actions
+        })[0]
+
+
+
     def compute_q_values(self, states, target=False):
         if target:
             actions = self.actor_target_model.predict(states)
@@ -68,7 +78,7 @@ class DDPGAgent:
     def experience_replay(self):
         experiences=self.replay_buffer.sample(self.batch_size)
         states=np.asarray([e[0] for e in experiences])
-        actions=np.asarray([e[2] for e in experiences])
+        actions=np.asarray([e[1] for e in experiences])
         rewards=np.asarray([e[2] for e in experiences])
         next_states=([e[3] for e in experiences])#Seperating states, actions, rewards and next states
         place_holder_state=np.zeros(self.state_dim)
@@ -82,7 +92,7 @@ class DDPGAgent:
                 y_target = rewards[index] + (self.gamma * q_values_for_next_states[index])
             training_label[index]=y_target
         self.train_critic_model([states, actions], training_label)
-
+        test = self.compute_critic_gradients(states, actions)
 
     def fit(self, number_of_epsiodes):
         for episode in range(number_of_epsiodes): #Looping through total number of episodes
