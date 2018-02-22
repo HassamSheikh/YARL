@@ -11,7 +11,7 @@ import numpy as np
 from keras import backend as K
 def create_critic_network(state_size, action_dim):
     state_input_layer = Input(shape=(state_size,), name='critic_state_input')
-    action_input_layer = Input(shape=(action_dim,),name='critic_action_input')
+    action_input_layer = Input(shape=(action_dim, ),name='critic_action_input')
     w1 = Dense(10, activation='relu')(state_input_layer)
     h1 = Dense(10, activation='linear')(w1)
     a1 = Dense(10, activation='linear')(action_input_layer)
