@@ -5,7 +5,7 @@ from rl.util import *
 from keras.optimizers import Adam, RMSprop
 from keras import losses
 from keras import backend as K
-
+import pdb
 class DDPGAgent:
     def __init__(self, env, actor, critic, replay_buffer, random_process, gamma=0.99, batch_size=64, tau=0, render=False):
         if len(critic.outputs) > 1:
@@ -37,19 +37,33 @@ class DDPGAgent:
             warnings.warn("Warning: At least one of your models is missing either an optimizer or loss function")
             if len(opt) != 2 or len(loss) != 2:
                 raise ValueError('Provide 2 optimizers and 2 loss functions')
-        self.actor_target_model=clone_model(self.actor_trainable_model)
-        self.critic_target_model=clone_model(self.critic_trainable_model)
+        # self.actor_target_model=clone_model(self.actor_trainable_model)
+        # self.critic_target_model=clone_model(self.critic_trainable_model)
 
-        self.action_gradients = K.tf.gradients(self.critic_trainable_model.output, self.critic_trainable_model.input_layers[1].input, name="Hassam_you_piece_of_shit")
+        self.action_gradients = K.tf.gradients(self.critic_trainable_model.output, self.critic_trainable_model.input_layers[1].input, name="critic_gradients_wrt_action")
+
+        self.action_gradient_place_holder = K.tf.placeholder(K.tf.float32, [None, self.action_dim])
+        self.unnormalized_actor_gradients = K.tf.gradients(self.actor_trainable_model.output, self.actor_trainable_model.trainable_weights, -self.action_gradient_place_holder, name="actor_gradients_wrt_network_params")
+
+        self.actor_gradients = list(map(lambda x: K.tf.div(x, self.batch_size), self.unnormalized_actor_gradients))
+        self.optimize = K.tf.train.AdamOptimizer(0.1).apply_gradients(zip(self.actor_gradients, self.actor_trainable_model.trainable_weights))
+
 
         self.actor_trainable_model.compile(loss=loss[0], optimizer=opt[0])
         self.critic_trainable_model.compile(loss=loss[1], optimizer=opt[1])
         self.sess = K.get_session()
-        self.actor_target_model.compile(loss=loss[0], optimizer=opt[0])
-        self.critic_target_model.compile(loss=loss[1], optimizer=opt[1])
+        # self.actor_target_model.compile(loss=loss[0], optimizer=opt[0])
+        # self.critic_target_model.compile(loss=loss[1], optimizer=opt[1])
 
     def train_critic_model(self, training_data, training_label, batch_size=64):
         self.critic_trainable_model.fit(training_data, training_label, batch_size=self.batch_size, verbose=0) #Training the network
+
+    # def train_actor_model(self, ):
+    #      self.sess.run(self.optimize, feed_dict={
+    #         self.inputs: inputs,
+    #         self.action_gradient_place_holder: a_gradient
+    #     })
+
 
     def update_target_model(self):
         if self.tau>0:
@@ -60,12 +74,17 @@ class DDPGAgent:
     def select_action(self, state):
         return self.actor_trainable_model.predict(state.reshape(1, self.state_dim)).flatten() + self.random_process()
 
+    def compute_actor_gradients(self, states, critic_action_gradients):
+         return self.sess.run(self.actor_gradients, feed_dict={
+            self.actor_trainable_model.input_layers[0].input: states,
+            self.action_gradient_place_holder: critic_action_gradients
+        })[0]
+
     def compute_critic_gradients(self, states, actions):
          return self.sess.run(self.action_gradients, feed_dict={
             self.critic_trainable_model.input_layers[0].input: states,
             self.critic_trainable_model.input_layers[1].input: actions
         })[0]
-
 
 
     def compute_q_values(self, states, target=False):
@@ -93,6 +112,8 @@ class DDPGAgent:
             training_label[index]=y_target
         self.train_critic_model([states, actions], training_label)
         test = self.compute_critic_gradients(states, actions)
+        ff = self.compute_actor_gradients(states, -test)
+        import pdb; pdb.set_trace()
 
     def fit(self, number_of_epsiodes):
         for episode in range(number_of_epsiodes): #Looping through total number of episodes
